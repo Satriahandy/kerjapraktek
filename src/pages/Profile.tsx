@@ -2,10 +2,19 @@ import React, { useState } from 'react';
 import { User, Palette, Globe, Bell, Shield, LogOut, Check } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useTheme } from '../context/ThemeContext';
+import { signOut } from '../services/authService';
 
 export const Profile: React.FC = () => {
   const { theme, setTheme } = useTheme();
   const [notifications, setNotifications] = useState(true);
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Error logging out:', error);
+    }
+  };
 
   // Example user data
   const user = {
@@ -116,7 +125,10 @@ export const Profile: React.FC = () => {
 
       {/* Danger Zone */}
       <div className="pt-4">
-        <button className="w-full flex items-center justify-center space-x-2 p-4 bg-rose-50 text-rose-500 border border-rose-100 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-rose-100 transition-colors">
+        <button 
+          onClick={handleLogout}
+          className="w-full flex items-center justify-center space-y-0 space-x-2 p-4 bg-rose-50 text-rose-500 border border-rose-100 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-rose-100 transition-colors"
+        >
           <LogOut size={18} />
           <span>Keluar Aplikasi</span>
         </button>

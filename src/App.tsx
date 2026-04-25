@@ -19,11 +19,43 @@ import { Transactions } from './pages/Transactions';
 import { AddTransaction } from './pages/AddTransaction';
 import { Categories } from './pages/Categories';
 import { Profile } from './pages/Profile';
+import { Login } from './pages/Login';
 import { useTransactions } from './hooks/useTransactions';
+import { useAuth } from './context/AuthContext';
+import { signOut } from './services/authService';
 
 export default function App() {
+  const { user, loading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'add' | 'categories' | 'profile'>('dashboard');
   const { transactions, loading, addTransaction, removeTransaction } = useTransactions();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
+
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-slate-50">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
+        <div className="mb-8 text-center">
+          <h1 className="text-slate-900 font-bold text-3xl tracking-tight">Bakmi Jowo <span className="text-primary">Ranto</span></h1>
+          <p className="text-sm text-slate-500 mt-2 uppercase tracking-widest font-bold">UMKM Financial Manager</p>
+        </div>
+        <Login />
+      </div>
+    );
+  }
 
   const NavItem = ({ tab, icon: Icon, label }: { tab: any, icon: any, label: string }) => (
     <button
@@ -82,7 +114,10 @@ export default function App() {
               <p className="text-xs text-white font-bold truncate">Mas Ranto</p>
               <p className="text-[10px] text-slate-500 truncate uppercase tracking-tighter">Owner</p>
             </div>
-            <button className="text-slate-500 hover:text-rose-500 transition-colors">
+            <button 
+              onClick={handleSignOut}
+              className="text-slate-500 hover:text-rose-500 transition-colors"
+            >
               <LogOut size={14} />
             </button>
           </div>

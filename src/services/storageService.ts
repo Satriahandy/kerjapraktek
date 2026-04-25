@@ -1,23 +1,56 @@
 import { Transaction } from '../types';
+import { createClient } from '@supabase/supabase-js';
 
-const STORAGE_KEY = 'bakmi_jowo_transactions';
+import { v4 as uuidv4 } from 'uuid';
 
-export const getTransactions = (): Transaction[] => {
-  const data = localStorage.getItem(STORAGE_KEY);
-  if (!data) return [];
-  try {
-    return JSON.parse(data);
-  } catch (e) {
-    console.error('Failed to parse transactions', e);
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+export const supabase = createClient(supabaseUrl, supabaseKey);
+
+// --- TRANSAKSI ---
+
+export const getTransactions = async (): Promise<Transaction[]> => {
+  const { data, error } = await supabase
+    .from('transactions')
+    .select('*')
+    .order('date', { ascending: false });
+
+  if (error) {
+    console.error('Gagal ambil data Supabase:', error);
     return [];
+  }
+  return data || [];
+};
+
+  export const saveTransaction = async (transaction: Transaction): Promise<void> => {
+    const { error } = await supabase
+      .from('transactions')
+      .insert([transaction]);
+
+    if (error) {
+      console.error('Gagal simpan ke Supabase:', error);
+      throw error;
+    }
+  };
+
+export const deleteTransaction = async (id: string): Promise<void> => {
+  const { error } = await supabase
+    .from('transactions')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error('Gagal hapus di Supabase:', error);
+    throw error;
   }
 };
 
-export const saveTransaction = (transaction: Transaction): void => {
-  const transactions = getTransactions();
-  transactions.push(transaction);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
-};
+
+
+// --- KATEGORI ---
+// Kita tetap simpan kategori di LocalStorage agar simpel, 
+// atau kamu bisa buat tabel baru di Supabase jika mau.
 
 const CATEGORY_KEY = 'bakmi_jowo_categories';
 
@@ -38,50 +71,14 @@ export const saveCategories = (categories: { income: string[], expense: string[]
   localStorage.setItem(CATEGORY_KEY, JSON.stringify(categories));
 };
 
-export const deleteTransaction = (id: string): void => {
-  const transactions = getTransactions();
-  const filtered = transactions.filter(t => t.id !== id);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
-};
+// --- CLEAN UP ---
 
-export const clearAllData = (): void => {
-  localStorage.removeItem(STORAGE_KEY);
-};
+export const clearAllData = async (): Promise<void> => {
+  // Hati-hati: Ini akan menghapus semua data di tabel Supabase
+  const { error } = await supabase
+    .from('transactions')
+    .delete()
+    .neq('id', '0'); // Hapus semua yang ID-nya bukan 0
 
-// Initial mock data if empty
-export const seedMockData = () => {
-  const existing = getTransactions();
-  if (existing.length > 0) return;
-
-  const now = new Date();
-  const mockData: Transaction[] = [];
-
-  for (let i = 0; i < 30; i++) {
-    const date = new Date();
-    date.setDate(now.getDate() - i);
-    
-    // Some income
-    mockData.push({
-      id: `mock-income-${i}`,
-      date: date.toISOString().split('T')[0],
-      type: 'income',
-      category: 'Bakmi Jowo',
-      description: 'Penjualan Bakmi',
-      amount: 500000 + Math.random() * 200000,
-      userId: 'test-user'
-    });
-
-    // Some expense
-    mockData.push({
-      id: `mock-expense-${i}`,
-      date: date.toISOString().split('T')[0],
-      type: 'expense',
-      category: 'Bahan Baku',
-      description: 'Belanja Sayur & Ayam',
-      amount: 100000 + Math.random() * 50000,
-      userId: 'test-user'
-    });
-  }
-
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(mockData));
+  if (error) console.error('Gagal membersihkan data:', error);
 };
