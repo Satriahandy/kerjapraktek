@@ -1,0 +1,6 @@
+{
+  "name": "Bakmi Jowo Mas Ranto - Laporan Keuangan",
+  "description": "Aplikasi manajemen keuangan UMKM untuk pencatatan transaksi, laporan harian/bulanan, dan analisis tren penjualan menggunakan grafik serta ringkasan AI.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["AI Analysis", "Financial Dashboard", "Real-time Transactions"]
+}
