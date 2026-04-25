@@ -1,12 +1,18 @@
 /// <reference types="vite/client" />
 import React, { useState } from 'react';
-import { User, Palette, Globe, Bell, Shield, LogOut, Check, Save, X, Edit3 } from 'lucide-react';
+import { User, Palette, Globe, Bell, Shield, LogOut, Check, Save, CheckCircle2 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useTheme } from '../context/ThemeContext';
-import { signOut, updateProfile } from '../services/authService';
+import { updateProfile } from '../services/authService';
 import { useAuth } from '../context/AuthContext';
+import toast from 'react-hot-toast';
 
-export const Profile: React.FC = () => {
+// 1. Tambahkan Interface untuk Props agar bisa menerima fungsi dari App.tsx
+interface ProfileProps {
+  onLogoutClick: () => void;
+}
+
+export const Profile: React.FC<ProfileProps> = ({ onLogoutClick }) => {
   const { theme, setTheme } = useTheme();
   const { user: supabaseUser } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
@@ -14,31 +20,27 @@ export const Profile: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [notifications, setNotifications] = useState(true);
 
-  const handleLogout = async () => {
-    try {
-      await signOut();
-    } catch (error) {
-      console.error('Error logging out:', error);
-    }
-  };
-
   const handleSaveProfile = async () => {
+    if (!fullName.trim()) return toast.error("Nama tidak boleh kosong");
+    
     setLoading(true);
     try {
       await updateProfile(fullName);
       setIsEditing(false);
+      toast.success('Profil berhasil diperbarui', {
+        icon: <CheckCircle2 className="text-emerald-500" size={18} />
+      });
     } catch (error) {
       console.error('Error updating profile:', error);
-      alert('Gagal update nama');
+      toast.error('Gagal memperbarui profil');
     } finally {
       setLoading(false);
     }
   };
 
-  // Profile data from metadata
   const user = {
-    name: supabaseUser?.user_metadata?.full_name || 'Admin Bakmi Jowo',
-    username: supabaseUser?.user_metadata?.username || 'admin',
+    name: supabaseUser?.user_metadata?.full_name || 'User',
+    username: supabaseUser?.email?.split('@')[0] || 'admin',
     role: 'Owner & Manager',
     since: new Date(supabaseUser?.created_at || Date.now()).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })
   };
@@ -56,7 +58,7 @@ export const Profile: React.FC = () => {
         <p className="text-slate-500 text-sm">Kelola profil dan preferensi aplikasi Anda.</p>
       </header>
 
-      {/* Profile Info */}
+      {/* Profile Info Card */}
       <div className="rustic-card p-6 flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-6">
         <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center text-primary border-2 border-primary/30 relative">
           <User size={40} />
@@ -79,14 +81,14 @@ export const Profile: React.FC = () => {
               <button 
                 onClick={handleSaveProfile}
                 disabled={loading}
-                className="flex items-center space-x-1 px-4 py-2 bg-slate-900 text-white rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-slate-800 disabled:opacity-50"
+                className="flex items-center space-x-1 px-4 py-2 bg-slate-900 text-white rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-slate-800 disabled:opacity-50 transition-all"
               >
                 <Save size={14} />
                 <span>{loading ? 'Menyimpan...' : 'Simpan'}</span>
               </button>
               <button 
                 onClick={() => setIsEditing(false)}
-                className="px-4 py-2 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold uppercase tracking-widest"
+                className="px-4 py-2 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-slate-200 transition-all"
               >
                 Batal
               </button>
@@ -98,7 +100,7 @@ export const Profile: React.FC = () => {
             <p className="text-primary text-sm font-bold mt-0.5">@{user.username}</p>
             <div className="flex flex-wrap justify-center md:justify-start gap-2 mt-2">
               <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-[10px] font-bold rounded uppercase tracking-widest">{user.role}</span>
-              <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-[10px] font-bold rounded uppercase tracking-widest">Sejak {user.since}</span>
+              <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-[10px] font-bold rounded uppercase tracking-widest text-nowrap">Sejak {user.since}</span>
             </div>
           </div>
         )}
@@ -106,14 +108,13 @@ export const Profile: React.FC = () => {
         {!isEditing && (
           <button 
             onClick={() => setIsEditing(true)}
-            className="px-4 py-2 bg-slate-900 text-white rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-slate-800 transition-colors"
+            className="px-4 py-2 bg-slate-900 text-white rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-slate-800 transition-all"
           >
             Edit Profil
           </button>
         )}
       </div>
 
-      {/* Settings Sections */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Tampilan */}
         <div className="rustic-card p-6 space-y-4">
@@ -144,7 +145,7 @@ export const Profile: React.FC = () => {
           </div>
         </div>
 
-        {/* Notifikasi & Keamanan */}
+        {/* Sistem */}
         <div className="rustic-card p-6 space-y-4">
           <div className="flex items-center space-x-2 text-slate-800 border-b border-slate-100 pb-3">
             <Shield size={18} className="text-primary" />
@@ -183,8 +184,8 @@ export const Profile: React.FC = () => {
       {/* Danger Zone */}
       <div className="pt-4">
         <button 
-          onClick={handleLogout}
-          className="w-full flex items-center justify-center space-y-0 space-x-2 p-4 bg-rose-50 text-rose-500 border border-rose-100 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-rose-100 transition-colors"
+          onClick={onLogoutClick} // 2. Gunakan fungsi dari props
+          className="w-full flex items-center justify-center space-x-2 p-4 bg-rose-50 text-rose-500 border border-rose-100 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-rose-100 transition-colors active:scale-[0.98]"
         >
           <LogOut size={18} />
           <span>Keluar Aplikasi</span>
