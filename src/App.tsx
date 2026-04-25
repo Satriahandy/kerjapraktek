@@ -229,13 +229,7 @@ export default function App() {
               
               {/* Atau jika tombol logoutnya ada di luar komponen Profile (di App.tsx) */}
               <div className="max-w-2xl mx-auto mt-6 px-4">
-                <button 
-                  onClick={() => setShowLogoutConfirm(true)} // Pemicu modal
-                  className="w-full flex items-center justify-center space-x-2 p-4 bg-white border-2 border-rose-100 text-rose-500 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-rose-50 transition-all active:scale-[0.98]"
-                >
-                  <LogOut size={16} />
-                  <span>Keluar dari Akun</span>
-                </button>
+                
               </div>
             </motion.div>
           )}
