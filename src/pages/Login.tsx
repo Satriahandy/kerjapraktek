@@ -47,7 +47,7 @@ export const Login: React.FC = () => {
             <label className="block text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Nama Lengkap</label>
             <input
               type="text"
-              placeholder="Contoh: Mas Ranto"
+              placeholder="Contoh: User"
               className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
