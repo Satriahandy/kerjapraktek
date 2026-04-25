@@ -1,50 +1,84 @@
-import { useState, useEffect } from 'react';
+/// <reference types="vite/client" />
+import { useState, useEffect, useCallback } from 'react';
 import { Transaction } from '../types';
 import * as storage from '../services/storageService';
+import * as supabaseService from '../services/supabaseService';
+import { useAuth } from '../context/AuthContext'; // Import ini
+
+const isSupabaseConfigured = () => {
+  return !!import.meta.env.VITE_SUPABASE_URL && !!import.meta.env.VITE_SUPABASE_ANON_KEY;
+};
 
 export function useTransactions() {
+  const { user } = useAuth(); // Ambil user yang sedang login
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 1. Fungsi untuk ambil data dari Supabase
-  const loadTransactions = async () => {
+  const refresh = useCallback(async () => {
+    // Jika pakai Supabase tapi user belum login, jangan fetch dulu
+    if (isSupabaseConfigured() && !user) {
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
-      const data = await storage.getTransactions();
-      setTransactions(data);
+      if (isSupabaseConfigured()) {
+        const data = await supabaseService.getSupabaseTransactions();
+        setTransactions(data);
+      } else {
+        setTransactions(storage.getTransactions().sort((a, b) => 
+          new Date(b.date).getTime() - new Date(a.date).getTime()
+        ));
+      }
     } catch (error) {
-      console.error("Gagal memuat transaksi:", error);
+      console.error('Failed to fetch transactions:', error);
+      setTransactions([]); // Set kosong jika error agar tidak campur data lama
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]); // Re-run refresh kalau user berubah (login/logout)
 
-  // Muat data saat pertama kali aplikasi dibuka
   useEffect(() => {
-    loadTransactions();
-  }, []);
+    if (!isSupabaseConfigured() && storage.getTransactions().length === 0) {
+      storage.seedMockData();
+    }
+    refresh();
+  }, [refresh]);
 
-  // 2. Fungsi untuk menambah transaksi
-  const addTransaction = async (transaction: Transaction) => {
+  const addTransaction = async (t: Omit<Transaction, 'id'>) => {
     try {
-      await storage.saveTransaction(transaction);
-      // Setelah simpan, ambil data terbaru dari server
-      await loadTransactions();
+      if (isSupabaseConfigured()) {
+        // Pastikan kita tidak menambah data jika user tidak ada
+        if (!user) throw new Error("User must be logged in");
+        
+        // Kirim data dengan ID user agar RLS mengizinkan insert
+        await supabaseService.saveSupabaseTransaction({ 
+          ...t, 
+          user_id: user.id 
+        } as any);
+      } else {
+        const newTransaction = { ...t, id: Math.random().toString(36).substr(2, 9) };
+        storage.saveTransaction(newTransaction);
+      }
+      refresh();
     } catch (error) {
-      alert("Gagal menyimpan transaksi ke database");
+      console.error('Failed to add transaction:', error);
     }
   };
 
-  // 3. Fungsi untuk menghapus transaksi
   const removeTransaction = async (id: string) => {
     try {
-      await storage.deleteTransaction(id);
-      // Update tampilan lokal agar cepat, atau panggil loadTransactions()
-      setTransactions(prev => prev.filter(t => t.id !== id));
+      if (isSupabaseConfigured()) {
+        await supabaseService.deleteSupabaseTransaction(id);
+      } else {
+        storage.deleteTransaction(id);
+      }
+      refresh();
     } catch (error) {
-      alert("Gagal menghapus transaksi");
+      console.error('Failed to remove transaction:', error);
     }
   };
 
-  return { transactions, loading, addTransaction, removeTransaction, refresh: loadTransactions };
+  return { transactions, loading, addTransaction, removeTransaction, refresh };
 }

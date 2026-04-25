@@ -1,14 +1,10 @@
 import React, { useState } from 'react';
+import { Toaster, toast } from 'react-hot-toast'; // Import toast di sini
 import { 
   LayoutDashboard, 
   PlusCircle, 
   History, 
-  TrendingUp, 
   LogOut,
-  Utensils,
-  Menu,
-  X,
-  Wallet,
   Tag,
   User
 } from 'lucide-react';
@@ -27,11 +23,12 @@ import { signOut } from './services/authService';
 export default function App() {
   const { user, loading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'add' | 'categories' | 'profile'>('dashboard');
-  const { transactions, loading, addTransaction, removeTransaction } = useTransactions();
+  const { transactions, addTransaction, removeTransaction } = useTransactions();
 
   const handleSignOut = async () => {
     try {
       await signOut();
+      toast.success('Berhasil keluar akun');
     } catch (error) {
       console.error('Error signing out:', error);
     }
@@ -49,8 +46,8 @@ export default function App() {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
         <div className="mb-8 text-center">
-          <h1 className="text-slate-900 font-bold text-3xl tracking-tight">Bakmi Jowo <span className="text-primary">Ranto</span></h1>
-          <p className="text-sm text-slate-500 mt-2 uppercase tracking-widest font-bold">UMKM Financial Manager</p>
+          <h1 className="text-slate-900 font-bold text-3xl tracking-tight">Laporan <span className="text-primary">Keuangan</span></h1>
+          <p className="text-sm text-slate-500 mt-2 uppercase tracking-widest font-bold">Money Report</p>
         </div>
         <Login />
       </div>
@@ -84,15 +81,18 @@ export default function App() {
     </button>
   );
 
+  const userInitial = user.user_metadata?.full_name?.[0] || user.email?.[0] || 'U';
+
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden text-slate-900">
+      {/* --- NOTIFIKASI TOASTER --- */}
+      <Toaster position="top-right" reverseOrder={false} />
+
       {/* Sidebar - Desktop */}
-      <aside 
-        className="hidden lg:flex w-64 bg-slate-900 text-slate-300 flex-col border-r border-slate-800"
-      >
+      <aside className="hidden lg:flex w-64 bg-slate-900 text-slate-300 flex-col border-r border-slate-800">
         <div className="p-6 border-b border-slate-800">
           <div className="flex items-center space-x-2">
-            <h1 className="text-white font-bold text-xl tracking-tight">Bakmi Jowo <span className="text-primary">Ranto</span></h1>
+            <h1 className="text-white font-bold text-xl tracking-tight">Laporan <span className="text-primary">Keuangan</span></h1>
           </div>
           <p className="text-[10px] text-slate-500 mt-1 uppercase tracking-widest font-bold">UMKM Dashboard</p>
         </div>
@@ -107,17 +107,16 @@ export default function App() {
 
         <div className="p-4 border-t border-slate-800">
           <div className="flex items-center space-x-3 p-2 bg-slate-800/50 rounded-lg">
-            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center font-bold text-slate-900 text-xs">
-              R
+            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center font-bold text-slate-900 text-xs uppercase">
+              {userInitial}
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs text-white font-bold truncate">Mas Ranto</p>
+            <div className="flex-1 min-w-0 pr-2">
+              <p className="text-xs text-white font-bold truncate">
+                {user.user_metadata?.full_name || user.email?.split('@')[0]}
+              </p>
               <p className="text-[10px] text-slate-500 truncate uppercase tracking-tighter">Owner</p>
             </div>
-            <button 
-              onClick={handleSignOut}
-              className="text-slate-500 hover:text-rose-500 transition-colors"
-            >
+            <button onClick={handleSignOut} className="text-slate-500 hover:text-rose-500 transition-colors">
               <LogOut size={14} />
             </button>
           </div>
@@ -126,9 +125,9 @@ export default function App() {
 
       {/* Mobile Menu & Top Bar */}
       <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white border-b border-slate-200 z-40 px-4 flex items-center justify-between">
-        <h1 className="text-slate-900 font-bold text-lg tracking-tight">Bakmi Jowo <span className="text-primary">Ranto</span></h1>
-        <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center font-bold text-slate-900 text-[10px]">
-          R
+        <h1 className="text-slate-900 font-bold text-lg tracking-tight">Laporan <span className="text-primary">Keuangan</span></h1>
+        <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center font-bold text-slate-900 text-xs uppercase">
+          {userInitial}
         </div>
       </div>
 
@@ -137,74 +136,46 @@ export default function App() {
         <div className="max-w-7xl mx-auto">
           <AnimatePresence mode="wait">
             {activeTab === 'dashboard' && (
-              <motion.div
-                key="dashboard"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-              >
-                <Dashboard transactions={transactions} />
+              <motion.div key="dashboard" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+                <Dashboard transactions={transactions} user={user} />
               </motion.div>
             )}
+            
             {activeTab === 'transactions' && (
-              <motion.div
-                key="transactions"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-              >
+              <motion.div key="transactions" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
                 <Transactions transactions={transactions} onDelete={removeTransaction} />
               </motion.div>
             )}
+
             {activeTab === 'add' && (
-              <motion.div
-                key="add"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-              >
+              <motion.div key="add" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
                 <AddTransaction 
-                  onAdd={(t) => {
-                    addTransaction(t);
-                    setActiveTab('dashboard');
+                  onAdd={async (t) => { 
+                    try {
+                      await addTransaction(t); 
+                      toast.success('Transaksi berhasil dicatat!'); // Notif di sini
+                      setActiveTab('dashboard'); 
+                    } catch (err) {
+                      toast.error('Gagal mencatat transaksi');
+                    }
                   }} 
                   onManageCategories={() => setActiveTab('categories')}
                 />
               </motion.div>
             )}
+
             {activeTab === 'categories' && (
-              <motion.div
-                key="categories"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-              >
+              <motion.div key="categories" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
                 <Categories />
               </motion.div>
             )}
+
             {activeTab === 'profile' && (
-              <motion.div
-                key="profile"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-              >
-                <Profile />
+              <motion.div key="profile" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+                <Profile session={user} />
               </motion.div>
             )}
           </AnimatePresence>
-        </div>
-
-        {/* Quick Action Floating Button - Desktop Only */}
-        <div className="hidden lg:block">
-          {activeTab !== 'add' && (
-            <button 
-              onClick={() => setActiveTab('add')}
-              className="fixed bottom-8 right-8 w-14 h-14 bg-primary text-slate-900 rounded-full shadow-lg shadow-primary/20 flex items-center justify-center hover:scale-105 active:scale-95 transition-transform z-30"
-            >
-              <PlusCircle size={28} />
-            </button>
-          )}
         </div>
       </main>
 
@@ -224,7 +195,6 @@ export default function App() {
         <MobileNavItem tab="categories" icon={Tag} label="Kategori" />
         <MobileNavItem tab="profile" icon={User} label="Profil" />
       </nav>
-
     </div>
   );
 }

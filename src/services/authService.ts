@@ -38,3 +38,14 @@ export const getCurrentUser = async () => {
   const { data: { user } } = await supabase.auth.getUser();
   return user;
 };
+
+// Tambahkan ini di authService.ts
+
+export const updateProfile = async (fullName: string) => {
+  const { data, error } = await supabase.auth.updateUser({
+    data: { full_name: fullName }
+  });
+  
+  if (error) throw error;
+  return data;
+};

@@ -7,13 +7,11 @@ import {
   Tag, 
   AlignLeft,
   Calendar,
-  CheckCircle2,
-  Settings2,
-  X
+  CheckCircle2
 } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { motion, AnimatePresence } from 'motion/react';
 import { useCategories } from '../hooks/useCategories';
+import toast from 'react-hot-toast'; // Tambahkan ini
 
 interface AddTransactionProps {
   onAdd: (t: any) => void;
@@ -21,7 +19,7 @@ interface AddTransactionProps {
 }
 
 export const AddTransaction: React.FC<AddTransactionProps> = ({ onAdd, onManageCategories }) => {
-  const { categories } = useCategories();
+  const { categories, loading: categoriesLoading } = useCategories();
   const [type, setType] = useState<TransactionType>('income');
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
@@ -30,18 +28,43 @@ export const AddTransaction: React.FC<AddTransactionProps> = ({ onAdd, onManageC
 
   const currentCategories = type === 'income' ? categories.income : categories.expense;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!amount || !description || !category) return;
+    
+    // Validasi input
+    if (!amount || parseFloat(amount) <= 0) {
+      toast.error('Masukkan jumlah nominal yang valid');
+      return;
+    }
+    if (!category) {
+      toast.error('Pilih kategori terlebih dahulu');
+      return;
+    }
+    if (!description.trim()) {
+      toast.error('Isi keterangan transaksi');
+      return;
+    }
 
-    onAdd({
-      date: new Date(date).toISOString(),
-      type,
-      category,
-      description,
-      amount: parseFloat(amount),
-      userId: 'user-1'
-    });
+    try {
+      // Kirim data ke fungsi onAdd (yang ada di App.tsx)
+      await onAdd({
+        date: new Date(date).toISOString(),
+        type,
+        category,
+        description: description.trim(),
+        amount: parseFloat(amount),
+      });
+
+      // Notifikasi sukses (opsional jika di App.tsx belum ada)
+      // toast.success('Transaksi berhasil disimpan!'); 
+      
+      // Reset form setelah berhasil
+      setAmount('');
+      setDescription('');
+      setCategory('');
+    } catch (error) {
+      toast.error('Gagal menyimpan transaksi');
+    }
   };
 
   return (
@@ -53,7 +76,7 @@ export const AddTransaction: React.FC<AddTransactionProps> = ({ onAdd, onManageC
         </div>
       </header>
 
-      <form onSubmit={handleSubmit} className="rustic-card space-y-6 p-6 md:p-8 relative overflow-hidden">
+      <form onSubmit={handleSubmit} className="rustic-card space-y-6 p-6 md:p-8 relative overflow-hidden bg-white rounded-2xl border border-slate-200 shadow-sm">
         {/* Toggle Type */}
         <div className="flex p-1 bg-slate-100 rounded-lg space-x-1 relative z-10">
           <button
@@ -140,29 +163,38 @@ export const AddTransaction: React.FC<AddTransactionProps> = ({ onAdd, onManageC
                 + Kelola Kategori
               </button>
             </div>
+            
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-              {currentCategories.map((cat) => (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() => setCategory(cat)}
-                  className={cn(
-                    "px-2 py-2.5 rounded-lg text-[9px] md:text-[10px] font-bold border transition-all uppercase tracking-tight md:tracking-wide truncate",
-                    category === cat 
-                      ? 'bg-primary border-primary text-slate-900 shadow-md' 
-                      : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'
-                  )}
-                >
-                  {cat}
-                </button>
-              ))}
+              {categoriesLoading ? (
+                <div className="col-span-full text-center py-2 text-[10px] text-slate-400">Memuat kategori...</div>
+              ) : currentCategories.length > 0 ? (
+                currentCategories.map((cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setCategory(cat)}
+                    className={cn(
+                      "px-2 py-2.5 rounded-lg text-[9px] md:text-[10px] font-bold border transition-all uppercase tracking-tight md:tracking-wide truncate",
+                      category === cat 
+                        ? 'bg-primary border-primary text-slate-900 shadow-md' 
+                        : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'
+                    )}
+                  >
+                    {cat}
+                  </button>
+                ))
+              ) : (
+                <div className="col-span-full text-center py-2 text-[10px] text-slate-400 italic">
+                  Belum ada kategori {type === 'income' ? 'pemasukan' : 'pengeluaran'}
+                </div>
+              )}
             </div>
           </div>
         </div>
 
         <button 
           type="submit" 
-          className="w-full rustic-button flex items-center justify-center space-x-2 py-4 group"
+          className="w-full bg-primary hover:bg-primary/90 text-slate-900 flex items-center justify-center space-x-2 py-4 rounded-xl font-bold shadow-lg shadow-primary/20 transition-all active:scale-[0.98] group"
         >
           <Plus size={18} />
           <span className="text-sm uppercase tracking-widest">Simpan Transaksi</span>
@@ -171,7 +203,7 @@ export const AddTransaction: React.FC<AddTransactionProps> = ({ onAdd, onManageC
 
       <div className="flex items-center justify-center space-x-2 text-slate-400 text-[10px] font-bold uppercase tracking-widest">
         <CheckCircle2 size={12} className="text-primary" />
-        <span>Data tersimpan secara lokal di browser Anda</span>
+        <span>Data tersimpan aman di akun Cloud Anda</span>
       </div>
     </div>
   );

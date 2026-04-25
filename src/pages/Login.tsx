@@ -37,7 +37,7 @@ export const Login: React.FC = () => {
           {isRegistering ? 'Daftar Akun' : 'Masuk Profil'}
         </h2>
         <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
-          Bakmi Jowo Ranto Manager
+          Log In
         </p>
       </div>
 

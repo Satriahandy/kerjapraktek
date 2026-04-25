@@ -1,11 +1,17 @@
+/// <reference types="vite/client" />
 import React, { useState } from 'react';
-import { User, Palette, Globe, Bell, Shield, LogOut, Check } from 'lucide-react';
+import { User, Palette, Globe, Bell, Shield, LogOut, Check, Save, X, Edit3 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useTheme } from '../context/ThemeContext';
-import { signOut } from '../services/authService';
+import { signOut, updateProfile } from '../services/authService';
+import { useAuth } from '../context/AuthContext';
 
 export const Profile: React.FC = () => {
   const { theme, setTheme } = useTheme();
+  const { user: supabaseUser } = useAuth();
+  const [isEditing, setIsEditing] = useState(false);
+  const [fullName, setFullName] = useState(supabaseUser?.user_metadata?.full_name || '');
+  const [loading, setLoading] = useState(false);
   const [notifications, setNotifications] = useState(true);
 
   const handleLogout = async () => {
@@ -16,12 +22,25 @@ export const Profile: React.FC = () => {
     }
   };
 
-  // Example user data
+  const handleSaveProfile = async () => {
+    setLoading(true);
+    try {
+      await updateProfile(fullName);
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      alert('Gagal update nama');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Profile data from metadata
   const user = {
-    name: 'Admin Bakmi Jowo',
-    email: 'satriahandyp@gmail.com',
-    role: 'Owner',
-    since: 'April 2024'
+    name: supabaseUser?.user_metadata?.full_name || 'Admin Bakmi Jowo',
+    username: supabaseUser?.user_metadata?.username || 'admin',
+    role: 'Owner & Manager',
+    since: new Date(supabaseUser?.created_at || Date.now()).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })
   };
 
   const themes = [
@@ -31,9 +50,9 @@ export const Profile: React.FC = () => {
   ];
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6 pb-12">
+    <div className="max-w-2xl mx-auto space-y-6 pb-12 text-slate-900">
       <header className="text-center md:text-left">
-        <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Akun & Pengaturan</h2>
+        <h2 className="text-2xl font-bold tracking-tight">Akun & Pengaturan</h2>
         <p className="text-slate-500 text-sm">Kelola profil dan preferensi aplikasi Anda.</p>
       </header>
 
@@ -43,17 +62,55 @@ export const Profile: React.FC = () => {
           <User size={40} />
           <div className="absolute bottom-0 right-0 w-6 h-6 bg-emerald-500 border-2 border-white rounded-full"></div>
         </div>
-        <div className="text-center md:text-left flex-1">
-          <h3 className="text-xl font-bold text-slate-900">{user.name}</h3>
-          <p className="text-slate-500 text-sm">{user.email}</p>
-          <div className="flex flex-wrap justify-center md:justify-start gap-2 mt-2">
-            <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-[10px] font-bold rounded uppercase tracking-widest">{user.role}</span>
-            <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-[10px] font-bold rounded uppercase tracking-widest">Sejak {user.since}</span>
+        
+        {isEditing ? (
+          <div className="flex-1 w-full space-y-3">
+            <div>
+              <label className="block text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Nama Lengkap</label>
+              <input 
+                type="text" 
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                placeholder="Masukkan nama baru"
+              />
+            </div>
+            <div className="flex space-x-2">
+              <button 
+                onClick={handleSaveProfile}
+                disabled={loading}
+                className="flex items-center space-x-1 px-4 py-2 bg-slate-900 text-white rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-slate-800 disabled:opacity-50"
+              >
+                <Save size={14} />
+                <span>{loading ? 'Menyimpan...' : 'Simpan'}</span>
+              </button>
+              <button 
+                onClick={() => setIsEditing(false)}
+                className="px-4 py-2 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold uppercase tracking-widest"
+              >
+                Batal
+              </button>
+            </div>
           </div>
-        </div>
-        <button className="px-4 py-2 bg-slate-900 text-white rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-slate-800 transition-colors">
-          Edit Profil
-        </button>
+        ) : (
+          <div className="text-center md:text-left flex-1">
+            <h3 className="text-xl font-bold">{user.name}</h3>
+            <p className="text-primary text-sm font-bold mt-0.5">@{user.username}</p>
+            <div className="flex flex-wrap justify-center md:justify-start gap-2 mt-2">
+              <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-[10px] font-bold rounded uppercase tracking-widest">{user.role}</span>
+              <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-[10px] font-bold rounded uppercase tracking-widest">Sejak {user.since}</span>
+            </div>
+          </div>
+        )}
+        
+        {!isEditing && (
+          <button 
+            onClick={() => setIsEditing(true)}
+            className="px-4 py-2 bg-slate-900 text-white rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-slate-800 transition-colors"
+          >
+            Edit Profil
+          </button>
+        )}
       </div>
 
       {/* Settings Sections */}
