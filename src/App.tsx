@@ -7,7 +7,6 @@ import {
   LogOut,
   Tag,
   User,
-  AlertCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
@@ -26,14 +25,13 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'add' | 'categories' | 'profile'>('dashboard');
   const { transactions, addTransaction, removeTransaction } = useTransactions();
   
-  // State untuk Modal Konfirmasi Logout
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const handleSignOut = async () => {
     try {
       await signOut();
       toast.success('Berhasil keluar akun');
-      setShowLogoutConfirm(false); // Tutup modal setelah berhasil
+      setShowLogoutConfirm(false);
     } catch (error) {
       console.error('Error signing out:', error);
       toast.error('Gagal keluar akun');
@@ -59,6 +57,12 @@ export default function App() {
       </div>
     );
   }
+
+  // --- LOGIKA MENGAMBIL DATA PROFIL UNTUK DASHBOARD ---
+  const userProfile = {
+    full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+    business_name: user.user_metadata?.business_name || 'Bisnis UMKM'
+  };
 
   const NavItem = ({ tab, icon: Icon, label }: { tab: any, icon: any, label: string }) => (
     <button
@@ -87,45 +91,24 @@ export default function App() {
     </button>
   );
 
-  const userInitial = user.user_metadata?.full_name?.[0] || user.email?.[0] || 'U';
+  const userInitial = userProfile.full_name[0] || 'U';
 
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden text-slate-900">
       <Toaster position="top-right" reverseOrder={false} />
 
-      {/* --- MODAL KONFIRMASI LOGOUT --- */}
+      {/* Modal Logout */}
       <AnimatePresence>
         {showLogoutConfirm && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-slate-100"
-            >
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl">
               <div className="flex flex-col items-center text-center space-y-4">
-                <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center">
-                  <LogOut size={24} />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900">Konfirmasi Keluar</h3>
-                  <p className="text-sm text-slate-500 mt-1">
-                    Apakah Anda yakin ingin keluar dari akun ini?
-                  </p>
-                </div>
+                <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center"><LogOut size={24} /></div>
+                <h3 className="text-lg font-bold text-slate-900">Konfirmasi Keluar</h3>
+                <p className="text-sm text-slate-500">Apakah Anda yakin ingin keluar dari akun ini?</p>
                 <div className="flex w-full gap-3 pt-2">
-                  <button 
-                    onClick={() => setShowLogoutConfirm(false)}
-                    className="flex-1 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs transition-colors"
-                  >
-                    Batal
-                  </button>
-                  <button 
-                    onClick={handleSignOut}
-                    className="flex-1 px-4 py-2.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl font-bold text-xs shadow-lg shadow-rose-200 transition-all"
-                  >
-                    Ya, Keluar
-                  </button>
+                  <button onClick={() => setShowLogoutConfirm(false)} className="flex-1 px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl font-bold text-xs">Batal</button>
+                  <button onClick={handleSignOut} className="flex-1 px-4 py-2.5 bg-rose-500 text-white rounded-xl font-bold text-xs shadow-lg shadow-rose-200">Ya, Keluar</button>
                 </div>
               </div>
             </motion.div>
@@ -133,12 +116,10 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* Sidebar - Desktop */}
+      {/* Sidebar Desktop */}
       <aside className="hidden lg:flex w-64 bg-slate-900 text-slate-300 flex-col border-r border-slate-800">
         <div className="p-6 border-b border-slate-800">
-          <div className="flex items-center space-x-2">
-            <h1 className="text-white font-bold text-xl tracking-tight">Laporan <span className="text-primary">Keuangan</span></h1>
-          </div>
+          <h1 className="text-white font-bold text-xl tracking-tight">Laporan <span className="text-primary">Keuangan</span></h1>
           <p className="text-[10px] text-slate-500 mt-1 uppercase tracking-widest font-bold">UMKM Dashboard</p>
         </div>
 
@@ -152,44 +133,26 @@ export default function App() {
 
         <div className="p-4 border-t border-slate-800">
           <div className="flex items-center space-x-3 p-2 bg-slate-800/50 rounded-lg">
-            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center font-bold text-slate-900 text-xs uppercase">
-              {userInitial}
-            </div>
+            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center font-bold text-slate-900 text-xs uppercase">{userInitial}</div>
             <div className="flex-1 min-w-0 pr-2">
-              <p className="text-xs text-white font-bold truncate">
-                {user.user_metadata?.full_name || user.email?.split('@')[0]}
-              </p>
+              <p className="text-xs text-white font-bold truncate">{userProfile.full_name}</p>
               <p className="text-[10px] text-slate-500 truncate uppercase tracking-tighter">Owner</p>
             </div>
-            {/* Tombol Logout Desktop */}
-            <button 
-              onClick={() => setShowLogoutConfirm(true)} 
-              className="text-slate-500 hover:text-rose-500 transition-colors"
-            >
+            <button onClick={() => setShowLogoutConfirm(true)} className="text-slate-500 hover:text-rose-500 transition-colors">
               <LogOut size={14} />
             </button>
           </div>
         </div>
       </aside>
 
-      {/* Mobile Menu & Top Bar */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white border-b border-slate-200 z-40 px-4 flex items-center justify-between">
-        <h1 className="text-slate-900 font-bold text-lg tracking-tight">Laporan <span className="text-primary">Keuangan</span></h1>
-        <button 
-          onClick={() => setActiveTab('profile')}
-          className="w-8 h-8 rounded-full bg-primary flex items-center justify-center font-bold text-slate-900 text-xs uppercase"
-        >
-          {userInitial}
-        </button>
-      </div>
-
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto pt-20 pb-24 lg:py-6 px-4 lg:px-6 bg-slate-50 relative">
+      <main className="flex-1 overflow-y-auto pt-20 pb-24 lg:py-6 px-4 lg:px-6 bg-slate-50">
         <div className="max-w-7xl mx-auto">
           <AnimatePresence mode="wait">
             {activeTab === 'dashboard' && (
               <motion.div key="dashboard" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-                <Dashboard transactions={transactions} user={user} />
+                {/* PERBAIKAN: Mengirim prop profile, bukan user */}
+                <Dashboard transactions={transactions} profile={userProfile} />
               </motion.div>
             )}
             
@@ -223,21 +186,15 @@ export default function App() {
             )}
 
             {activeTab === 'profile' && (
-            <motion.div key="profile" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-              {/* Kirim fungsi pemicu modal ke dalam komponen Profile jika tombolnya ada di dalam sana */}
-              <Profile session={user} onLogoutClick={() => setShowLogoutConfirm(true)} />
-              
-              {/* Atau jika tombol logoutnya ada di luar komponen Profile (di App.tsx) */}
-              <div className="max-w-2xl mx-auto mt-6 px-4">
-                
-              </div>
-            </motion.div>
-          )}
+              <motion.div key="profile" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+                <Profile session={user} onLogoutClick={() => setShowLogoutConfirm(true)} />
+              </motion.div>
+            )}
           </AnimatePresence>
         </div>
       </main>
 
-      {/* Mobile Bottom Navigation */}
+      {/* Mobile Nav */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-4 py-3 flex items-center justify-between z-40">
         <MobileNavItem tab="dashboard" icon={LayoutDashboard} label="Home" />
         <MobileNavItem tab="transactions" icon={History} label="Riwayat" />
