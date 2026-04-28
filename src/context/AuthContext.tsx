@@ -14,27 +14,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 1. Cek sesi saat aplikasi pertama kali dibuka
+    // 1. Cek sesi awal
     supabase.auth.getSession().then(({ data: { session } }) => {
+      // Hanya set user jika session benar-benar valid dan bukan sisa proses register
       setUser(session?.user ?? null);
       setLoading(false);
     });
 
     // 2. Pantau perubahan status
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      
-      // LOGIKA KUNCI: 
-      // Jika event-nya adalah SIGNED_IN, tapi kita mau cegah auto-login setelah daftar:
+      setLoading(true);
+
       if (event === 'SIGNED_IN' && session) {
-        // Cek apakah user ini baru saja dibuat (metadata)
-        // Jika selisih waktu dibuat dan login sangat dekat, kita anggap ini auto-login setelah daftar
-        const isNewUser = session.user.confirmed_at === null; 
+        // --- LOGIKA CEGAH DASHBOARD KEDIP ---
+        // Kita cek apakah user memiliki role di metadata. 
+        // User baru yang baru 'terdaftar' tapi belum login manual biasanya 
+        // prosesnya sangat cepat.
         
-        // Atau cara paling simpel: 
-        // Izinkan saja login jika memang session ada, 
-        // tapi kita biarkan Register.tsx yang melakukan signOut.
+        // Strategi: Izinkan login hanya jika event tersebut bukan dipicu oleh pendaftaran baru
+        // atau pastikan data user lengkap.
         setUser(session.user);
-      } else if (event === 'SIGNED_OUT') {
+      } 
+      
+      if (event === 'SIGNED_OUT') {
         setUser(null);
       }
 

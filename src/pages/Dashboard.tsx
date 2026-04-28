@@ -1,41 +1,47 @@
-import React, { useState } from 'react';
-import { Transaction, Profile } from '../types';
+import React, { useState } from 'react'; // Tambah useState
+import { Transaction } from '../types';
 import { 
   TrendingUp, 
   TrendingDown, 
   Wallet, 
   Calendar as CalendarIcon,
-  ChevronLeft,
+  FileDown,
+  FileSpreadsheet,
+  ChevronLeft, // Tambah icon navigasi
   ChevronRight
 } from 'lucide-react';
 import { formatCurrency, cn } from '../lib/utils';
 import { TrendChart, ComparisonChart } from '../components/Charts';
+import { useAuth } from '../context/AuthContext';
+import { exportToExcel, exportToPDF } from '../services/exportService';
+import toast from 'react-hot-toast';
 
 interface DashboardProps {
   transactions: Transaction[];
-  profile: Profile | null;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ transactions, profile }) => {
-  // --- 1. STATE UNTUK FILTER BULAN DI DASHBOARD ---
-  const [currentDate, setCurrentDate] = useState(new Date());
+export const Dashboard: React.FC<DashboardProps> = ({ transactions }) => {
+  const { user } = useAuth();
+  const displayName = user?.user_metadata?.full_name || 'Admin';
+  const role = user?.user_metadata?.role || 'pemilik';
 
-  const nextMonth = () => {
-    setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)));
+  // --- LOGIKA PERIODE BULAN ---
+  const now = new Date();
+  const [selectedDate, setSelectedDate] = useState(new Date(now.getFullYear(), now.getMonth(), 1));
+
+  const handlePrevMonth = () => {
+    setSelectedDate(new Date(selectedDate.getFullYear(), selectedDate.getMonth() - 1, 1));
   };
 
-  const prevMonth = () => {
-    setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)));
+  const handleNextMonth = () => {
+    setSelectedDate(new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 1));
   };
 
-  // --- 2. FILTER TRANSAKSI BERDASARKAN BULAN YANG DIPILIH ---
-  const filteredTransactions = transactions.filter(t => {
-    const tDate = new Date(t.date);
-    return tDate.getMonth() === currentDate.getMonth() && 
-           tDate.getFullYear() === currentDate.getFullYear();
-  });
+  const currentMonthStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}`;
+  
+  // Filter transaksi berdasarkan bulan yang dipilih
+  const filteredTransactions = transactions.filter(t => t.date.startsWith(currentMonthStr));
 
-  // --- 3. HITUNG TOTAL DARI DATA YANG SUDAH DIFILTER ---
   const totalIncome = filteredTransactions
     .filter(t => t.type === 'income')
     .reduce((acc, t) => acc + t.amount, 0);
@@ -46,24 +52,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ transactions, profile }) =
   
   const balance = totalIncome - totalExpense;
 
-  // Nama User & Bisnis
-  const displayName = profile?.full_name ? profile.full_name.split(' ')[0] : 'User';
-  const businessDisplayName = profile?.business_name || 'Bisnis Anda';
-
-  // --- 4. PROSES DATA GRAFIK (HANYA BULAN TERPILIH) ---
-  const year = currentDate.getFullYear();
-  const month = currentDate.getMonth();
+  // Process data for charts berdasarkan bulan terpilih
+  const year = selectedDate.getFullYear();
+  const month = selectedDate.getMonth();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
   const monthlyData = Array.from({ length: daysInMonth }, (_, i) => {
     const day = i + 1;
-    const dateObj = new Date(year, month, day);
-    const y = dateObj.getFullYear();
-    const m = String(dateObj.getMonth() + 1).padStart(2, '0');
-    const d = String(dateObj.getDate()).padStart(2, '0');
-    const isoDateStr = `${y}-${m}-${d}`;
-    
-    const dayTransactions = filteredTransactions.filter(t => t.date.startsWith(isoDateStr));
+    const isoDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const dayTransactions = filteredTransactions.filter(t => t.date === isoDateStr);
     
     return {
       date: String(day),
@@ -71,6 +68,24 @@ export const Dashboard: React.FC<DashboardProps> = ({ transactions, profile }) =
       expense: dayTransactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0),
     };
   });
+
+  const handleExportExcel = () => {
+    if (filteredTransactions.length === 0) {
+      toast.error('Tidak ada data di bulan ini untuk diekspor!');
+      return;
+    }
+    exportToExcel(filteredTransactions);
+    toast.success('Excel bulan ini berhasil diunduh!');
+  };
+
+  const handleExportPDF = () => {
+    if (filteredTransactions.length === 0) {
+      toast.error('Tidak ada data di bulan ini untuk diekspor!');
+      return;
+    }
+    exportToPDF(filteredTransactions);
+    toast.success('PDF bulan ini berhasil diunduh!');
+  };
 
   const topCategories = Object.entries(
     filteredTransactions
@@ -84,105 +99,121 @@ export const Dashboard: React.FC<DashboardProps> = ({ transactions, profile }) =
     .slice(0, 3);
 
   return (
-    <div className="space-y-6 pb-12">
+    <div className="space-y-6 pb-12 text-slate-900">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Halo, {displayName}!</h2>
-          <p className="text-slate-500 text-sm">Laporan keuangan {businessDisplayName}.</p>
-        </div>
-
-        {/* --- NAVIGASI BULAN DI DASHBOARD --- */}
-        <div className="flex items-center space-x-2 bg-white px-2 py-1 rounded-xl border border-slate-200 shadow-sm self-start">
-          <button onClick={prevMonth} className="p-1.5 hover:bg-slate-50 rounded-lg text-slate-400 hover:text-primary transition-colors">
-            <ChevronLeft size={18} />
-          </button>
-          <div className="flex items-center px-2 space-x-2">
-            <CalendarIcon size={14} className="text-primary" />
-            <span className="text-xs font-bold text-slate-700 min-w-[100px] text-center">
-              {currentDate.toLocaleString('id-ID', { month: 'long', year: 'numeric' })}
+          <div className="flex items-center space-x-3">
+            <h2 className="text-2xl font-bold tracking-tight">Halo, {displayName}!</h2>
+            <span className={cn(
+              "px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest",
+              role === 'pemilik' ? "bg-slate-900 text-primary" : "bg-primary text-slate-900"
+            )}>
+              {role}
             </span>
           </div>
-          <button onClick={nextMonth} className="p-1.5 hover:bg-slate-50 rounded-lg text-slate-400 hover:text-primary transition-colors">
-            <ChevronRight size={18} />
+          <p className="text-slate-500 text-sm">Laporan keuangan periode terpilih.</p>
+        </div>
+        
+        <div className="flex flex-wrap items-center gap-2">
+          {/* PEMILIH BULAN */}
+          <div className="flex items-center bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <button 
+              onClick={handlePrevMonth}
+              className="p-2 hover:bg-slate-50 text-slate-500 border-r border-slate-100 transition-colors"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <div className="flex items-center px-4 space-x-2">
+              <CalendarIcon size={14} className="text-primary" />
+              <span className="text-xs font-bold text-slate-700 min-w-[120px] text-center">
+                {selectedDate.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
+              </span>
+            </div>
+            <button 
+              onClick={handleNextMonth}
+              className="p-2 hover:bg-slate-50 text-slate-500 border-l border-slate-100 transition-colors"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+
+          <button 
+            onClick={handleExportExcel}
+            className="flex items-center space-x-2 px-3 py-2 bg-emerald-50 text-emerald-600 rounded-xl border border-emerald-100 text-[10px] font-bold uppercase tracking-wider hover:bg-emerald-100 transition-colors"
+          >
+            <FileSpreadsheet size={14} />
+            <span className="hidden sm:inline">Excel</span>
+          </button>
+          <button 
+            onClick={handleExportPDF}
+            className="flex items-center space-x-2 px-3 py-2 bg-rose-50 text-rose-500 rounded-xl border border-rose-100 text-[10px] font-bold uppercase tracking-wider hover:bg-rose-100 transition-colors"
+          >
+            <FileDown size={14} />
+            <span className="hidden sm:inline">PDF</span>
           </button>
         </div>
       </header>
 
-      {/* Stats Grid - OTOMATIS RESET TIAP BULAN */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <StatCard 
-          label={`Saldo (${currentDate.toLocaleString('id-ID', {month: 'short'})})`} 
-          value={balance} 
-          icon={Wallet} 
-          color="slate" 
-        />
-        <StatCard 
-          label="Pemasukan" 
-          value={totalIncome} 
-          icon={TrendingUp} 
-          color="emerald" 
-        />
-        <StatCard 
-          label="Pengeluaran" 
-          value={totalExpense} 
-          icon={TrendingDown} 
-          color="rose" 
-        />
+        <StatCard label="Saldo Periode Ini" value={balance} icon={Wallet} color="slate" />
+        <StatCard label="Pemasukan" value={totalIncome} icon={TrendingUp} color="emerald" />
+        <StatCard label="Pengeluaran" value={totalExpense} icon={TrendingDown} color="rose" />
       </div>
 
-      {/* Tren Pemasukan - Mengikuti Bulan Terpilih */}
-      <div className="grid grid-cols-1 gap-6">
-        <section className="rustic-card bg-white flex flex-col">
-          <h3 className="font-bold text-sm mb-4">Grafik Transaksi: {currentDate.toLocaleString('id-ID', { month: 'long' })}</h3>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <section className="lg:col-span-2 rustic-card bg-white flex flex-col">
+          <h3 className="font-bold text-sm mb-4 uppercase tracking-tighter">Tren Transaksi</h3>
           <div className="flex-1 min-h-[300px]">
             {filteredTransactions.length > 0 ? (
               <TrendChart data={monthlyData} height={300} />
             ) : (
               <div className="flex flex-col items-center justify-center h-full py-12">
-                <p className="text-slate-400 text-xs font-medium">Belum ada data untuk bulan ini.</p>
+                <p className="text-slate-400 text-xs font-medium italic">Tidak ada data transaksi di bulan ini.</p>
               </div>
             )}
           </div>
         </section>
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <section className="lg:col-span-2 rustic-card min-h-[250px] flex flex-col">
-          <h3 className="font-bold text-sm mb-4">Perbandingan Harian</h3>
-          <div className="flex-1 flex items-center justify-center">
-            {filteredTransactions.length > 0 ? (
-              <ComparisonChart data={monthlyData} height={200} />
-            ) : (
-              <p className="text-slate-400 text-xs font-medium">Tidak ada data.</p>
-            )}
-          </div>
-        </section>
-
-        <section className="rustic-card flex flex-col">
-          <h3 className="font-bold text-sm mb-4">Pemasukan Terbesar</h3>
-          <div className="space-y-2 flex-1">
-            {topCategories.length > 0 ? topCategories.map(([cat, amt]: [string, number]) => (
-              <div key={cat} className="p-3 bg-slate-50 rounded-lg border border-slate-100 flex items-center justify-between">
+        <section className="rustic-card flex flex-col h-full">
+          <h3 className="font-bold text-sm mb-4 uppercase tracking-tighter">Pemasukan Terbesar</h3>
+          <div className="space-y-3 flex-1">
+            {topCategories.map(([cat, amt]) => (
+              <div key={cat} className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between">
                 <div>
                   <span className="text-xs font-bold text-slate-800 block">{cat}</span>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Sumber</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Kategori</span>
                 </div>
                 <div className="text-sm font-bold text-slate-900">{formatCurrency(amt)}</div>
               </div>
-            )) : (
-              <p className="text-[10px] text-slate-400 text-center py-4">Belum ada data masuk.</p>
+            ))}
+            {topCategories.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-8">
+                <p className="text-slate-400 text-[10px] uppercase font-bold tracking-widest text-center italic">Kosong</p>
+              </div>
             )}
           </div>
-          <div className="mt-4 p-3 bg-primary/5 border border-primary/10 rounded-lg text-center">
-             <p className="text-[10px] text-primary font-bold italic">"Catat rapi, bisnis makin hoki!"</p>
+          <div className="mt-6 p-4 bg-primary/10 border border-primary/20 rounded-xl">
+             <p className="text-[11px] text-slate-700 font-bold italic text-center">"Hanya yang tercatat yang bisa dievaluasi."</p>
           </div>
         </section>
       </div>
+
+      <section className="rustic-card min-h-[300px] flex flex-col">
+        <h3 className="font-bold text-sm mb-6 uppercase tracking-tighter">Perbandingan Harian</h3>
+        <div className="flex-1">
+          {filteredTransactions.length > 0 ? (
+            <ComparisonChart data={monthlyData} height={250} />
+          ) : (
+            <div className="flex items-center justify-center h-[200px]">
+              <p className="text-slate-400 text-xs font-medium italic">Data tidak tersedia.</p>
+            </div>
+          )}
+        </div>
+      </section>
     </div>
   );
 };
 
-// StatCard Sub-component
 interface StatCardProps {
   label: string;
   value: number;
@@ -199,17 +230,15 @@ const StatCard: React.FC<StatCardProps> = ({ label, value, icon: Icon, color }) 
   };
 
   return (
-    <div className="rustic-card p-4 flex flex-col justify-between">
-      <div className="flex justify-between items-start">
-        <div>
-          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">{label}</p>
-          <p className={cn("text-xl md:text-2xl font-bold truncate", textColorClasses[color])}>
-             {formatCurrency(value)}
-          </p>
-        </div>
-        <div className={cn("p-2 rounded-lg bg-slate-50", textColorClasses[color])}>
-          <Icon size={20} />
-        </div>
+    <div className="rustic-card p-5 flex items-center justify-between bg-white border border-slate-200">
+      <div>
+        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">{label}</p>
+        <p className={cn("text-2xl font-bold truncate", textColorClasses[color])}>
+           {formatCurrency(value)}
+        </p>
+      </div>
+      <div className={cn("p-3 rounded-xl bg-slate-50", textColorClasses[color])}>
+        <Icon size={24} />
       </div>
     </div>
   );

@@ -27,9 +27,15 @@ export default function App() {
   
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
+  // --- PERBAIKAN LOGIKA LOGOUT ---
   const handleSignOut = async () => {
     try {
+      // 1. Reset tab ke dashboard dulu agar user berikutnya tidak "nyangkut" di halaman profil
+      setActiveTab('dashboard');
+      
+      // 2. Jalankan proses logout
       await signOut();
+      
       toast.success('Berhasil keluar akun');
       setShowLogoutConfirm(false);
     } catch (error) {
@@ -58,10 +64,11 @@ export default function App() {
     );
   }
 
-  // --- LOGIKA MENGAMBIL DATA PROFIL UNTUK DASHBOARD ---
+  // --- LOGIKA DATA PROFIL ---
   const userProfile = {
     full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-    business_name: user.user_metadata?.business_name || 'Bisnis UMKM'
+    business_name: user.user_metadata?.business_name || 'Bisnis UMKM',
+    role: user.user_metadata?.role || 'kasir' 
   };
 
   const NavItem = ({ tab, icon: Icon, label }: { tab: any, icon: any, label: string }) => (
@@ -97,7 +104,6 @@ export default function App() {
     <div className="flex h-screen bg-slate-50 overflow-hidden text-slate-900">
       <Toaster position="top-right" reverseOrder={false} />
 
-      {/* Modal Logout */}
       <AnimatePresence>
         {showLogoutConfirm && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
@@ -116,7 +122,6 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* Sidebar Desktop */}
       <aside className="hidden lg:flex w-64 bg-slate-900 text-slate-300 flex-col border-r border-slate-800">
         <div className="p-6 border-b border-slate-800">
           <h1 className="text-white font-bold text-xl tracking-tight">Laporan <span className="text-primary">Keuangan</span></h1>
@@ -136,7 +141,9 @@ export default function App() {
             <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center font-bold text-slate-900 text-xs uppercase">{userInitial}</div>
             <div className="flex-1 min-w-0 pr-2">
               <p className="text-xs text-white font-bold truncate">{userProfile.full_name}</p>
-              <p className="text-[10px] text-slate-500 truncate uppercase tracking-tighter">Owner</p>
+              <p className="text-[10px] text-slate-500 truncate uppercase tracking-tighter">
+                {userProfile.role === 'pemilik' ? 'Pemilik' : 'Kasir'}
+              </p>
             </div>
             <button onClick={() => setShowLogoutConfirm(true)} className="text-slate-500 hover:text-rose-500 transition-colors">
               <LogOut size={14} />
@@ -145,14 +152,12 @@ export default function App() {
         </div>
       </aside>
 
-      {/* Main Content */}
       <main className="flex-1 overflow-y-auto pt-20 pb-24 lg:py-6 px-4 lg:px-6 bg-slate-50">
         <div className="max-w-7xl mx-auto">
           <AnimatePresence mode="wait">
             {activeTab === 'dashboard' && (
               <motion.div key="dashboard" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-                {/* PERBAIKAN: Mengirim prop profile, bukan user */}
-                <Dashboard transactions={transactions} profile={userProfile} />
+                <Dashboard transactions={transactions} />
               </motion.div>
             )}
             
@@ -194,7 +199,6 @@ export default function App() {
         </div>
       </main>
 
-      {/* Mobile Nav */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-4 py-3 flex items-center justify-between z-40">
         <MobileNavItem tab="dashboard" icon={LayoutDashboard} label="Home" />
         <MobileNavItem tab="transactions" icon={History} label="Riwayat" />

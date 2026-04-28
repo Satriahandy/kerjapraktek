@@ -1,9 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { 
-  getSupabaseCategories, 
-  saveSupabaseCategory, 
-  deleteSupabaseCategory 
-} from '../services/supabaseService';
+import { supabase } from '../lib/supabase'; // Pastikan path ini benar
 import { useAuth } from '../context/AuthContext';
 
 export function useCategories() {
@@ -14,15 +10,22 @@ export function useCategories() {
   });
   const [loading, setLoading] = useState(true);
 
-  // 1. Fungsi Fetch Data dari Supabase
+  // 1. Ambil Data Langsung (Tidak lewat Service agar lebih akurat)
   const refreshCategories = useCallback(async () => {
     if (!user) return;
     
     setLoading(true);
     try {
-      const data = await getSupabaseCategories();
-      
-      // Transformasi data dari flat array (database) ke object {income, expense}
+      // Ambil owner_id dari metadata
+      const ownerId = user.user_metadata?.owner_id || user.id;
+
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('owner_id', ownerId); // Filter sesuai SQL baru
+
+      if (error) throw error;
+
       const formatted = data.reduce((acc: any, curr: any) => {
         if (curr.type === 'income') acc.income.push(curr.name);
         if (curr.type === 'expense') acc.expense.push(curr.name);
@@ -41,36 +44,50 @@ export function useCategories() {
     refreshCategories();
   }, [refreshCategories]);
 
-  // 2. Tambah Kategori ke Supabase
+  // 2. Tambah Kategori
   const addCategory = async (type: 'income' | 'expense', name: string) => {
     if (!user) return;
     
     try {
-      // Cek agar tidak duplikat di UI
-      if (!categories[type].includes(name)) {
-        await saveSupabaseCategory(name, type);
-        await refreshCategories(); // Ambil data terbaru dari DB
-      }
+      const ownerId = user.user_metadata?.owner_id || user.id;
+
+      const { error } = await supabase
+        .from('categories')
+        .insert([{ 
+          name, 
+          type, 
+          owner_id: ownerId // WAJIB ada agar muncul di UI
+        }]);
+
+      if (error) throw error;
+      
+      await refreshCategories(); // Paksa ambil data terbaru
     } catch (error) {
       console.error('Error adding category:', error);
+      throw error; // Lempar error agar toast di UI muncul
     }
   };
 
-  // 3. Hapus Kategori dari Supabase
+  // 3. Hapus Kategori
   const removeCategory = async (type: 'income' | 'expense', name: string) => {
     if (!user) return;
 
     try {
-      // Karena kita butuh ID untuk hapus di DB, kita cari dulu itemnya
-      const allData = await getSupabaseCategories();
-      const target = allData.find((c: any) => c.name === name && c.type === type);
+      const ownerId = user.user_metadata?.owner_id || user.id;
+
+      const { error } = await supabase
+        .from('categories')
+        .delete()
+        .eq('name', name)
+        .eq('type', type)
+        .eq('owner_id', ownerId);
+
+      if (error) throw error;
       
-      if (target) {
-        await deleteSupabaseCategory(target.id);
-        await refreshCategories();
-      }
+      await refreshCategories();
     } catch (error) {
       console.error('Error removing category:', error);
+      throw error;
     }
   };
 

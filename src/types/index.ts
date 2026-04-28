@@ -12,7 +12,11 @@ export interface Transaction {
   category: string;
   description: string;
   amount: number;
-  userId: string;
+  user_id: string;
+  owner_id: string;
+  profiles?: {
+    username: string;
+  };
 }
 
 export interface DailySummary {

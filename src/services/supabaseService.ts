@@ -4,24 +4,26 @@ import { Transaction } from '../types';
 /** * TRANSAKSI SECTION 
  */
 
-// 1. Ambil data transaksi (Otomatis terfilter RLS)
-export const getSupabaseTransactions = async (): Promise<Transaction[]> => {
+// 1. Ambil data transaksi (Otomatis terfilter RLS per owner_id)
+export const getSupabaseTransactions = async (): Promise<any[]> => {
   const { data, error } = await supabase
     .from('transactions')
-    .select('*')
+    .select('*, profiles(username)')
     .order('date', { ascending: false });
 
   if (error) {
     console.error('Error fetching transactions:', error);
     return [];
   }
-  return data as Transaction[];
+  return data;
 };
 
 // 2. Simpan transaksi baru
 export const saveSupabaseTransaction = async (transaction: Omit<Transaction, 'id'>) => {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("User not authenticated");
+
+  const ownerId = user.user_metadata?.owner_id || user.id;
 
   const { data, error } = await supabase
     .from('transactions')
@@ -31,8 +33,9 @@ export const saveSupabaseTransaction = async (transaction: Omit<Transaction, 'id
         type: transaction.type,
         category: transaction.category,
         description: transaction.description,
-        amount: Number(transaction.amount), // Pastikan angka
-        user_id: user.id 
+        amount: Number(transaction.amount),
+        user_id: user.id,
+        owner_id: ownerId
       }
     ])
     .select();
@@ -69,17 +72,20 @@ export const getSupabaseCategories = async () => {
   return data;
 };
 
-// 5. Simpan kategori baru khusus untuk user ini
+// 5. Simpan kategori baru khusus untuk bisnis ini
 export const saveSupabaseCategory = async (name: string, type: 'income' | 'expense') => {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("User not authenticated");
+
+  const ownerId = user.user_metadata?.owner_id || user.id;
 
   const { data, error } = await supabase
     .from('categories')
     .insert([{ 
       name, 
       type, 
-      user_id: user.id // Stempel ID user agar tidak muncul di orang lain
+      user_id: user.id,
+      owner_id: ownerId
     }])
     .select();
 
