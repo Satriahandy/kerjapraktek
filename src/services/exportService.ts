@@ -1,15 +1,11 @@
 import { utils, writeFile } from 'xlsx';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable'; // 1. Impor sebagai fungsi mandiri
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 
-// Extend jsPDF with autotable
-declare module 'jspdf' {
-  interface jsPDF {
-    autoTable: (options: any) => jsPDF;
-  }
-}
+// 2. Hapus declare module 'jspdf' karena kita akan pakai fungsi autoTable secara langsung
+// Ini jauh lebih aman untuk menghindari error "is not a function"
 
 export const exportToExcel = (transactions: any[]) => {
   const data = transactions.map(t => ({
@@ -46,11 +42,21 @@ export const exportToPDF = (transactions: any[]) => {
     new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(t.amount)
   ]);
 
-  doc.autoTable({
+  // 3. PANGGIL SEBAGAI FUNGSI: autoTable(doc, { ... })
+  // Bukan doc.autoTable({ ... })
+  autoTable(doc, {
     startY: 40,
     head: [['Tanggal', 'Keterangan', 'Kategori', 'Jenis', 'Jumlah']],
     body: tableData,
-    headStyles: { fillColor: [241, 202, 22], textColor: [31, 41, 55], fontStyle: 'bold' },
+    headStyles: { 
+      fillColor: [241, 202, 22], 
+      textColor: [31, 41, 55], 
+      fontStyle: 'bold',
+      halign: 'center' 
+    },
+    columnStyles: {
+      4: { halign: 'right' } // Merapikan kolom jumlah agar rata kanan
+    },
     alternateRowStyles: { fillColor: [248, 250, 252] },
     margin: { top: 40 },
   });
