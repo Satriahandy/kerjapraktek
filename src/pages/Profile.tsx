@@ -1,11 +1,12 @@
 /// <reference types="vite/client" />
 import React, { useState } from 'react';
-import { User, Palette, Globe, Bell, Shield, LogOut, Check, Save, X, Edit3 } from 'lucide-react';
+import { User, Palette, Globe, Bell, Shield, LogOut, Check, Save, X, Edit3, AlertCircle } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useTheme } from '../context/ThemeContext';
 import { signOut, updateProfile } from '../services/authService';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
+import { motion, AnimatePresence } from 'motion/react';
 
 export const Profile: React.FC = () => {
   const { theme, setTheme } = useTheme();
@@ -14,14 +15,19 @@ export const Profile: React.FC = () => {
   const [fullName, setFullName] = useState(supabaseUser?.user_metadata?.full_name || '');
   const [loading, setLoading] = useState(false);
   const [notifications, setNotifications] = useState(true);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const handleLogout = async () => {
+    setLoading(true);
     try {
       await signOut();
       toast.success('Berhasil keluar!');
     } catch (error) {
       console.error('Error logging out:', error);
       toast.error('Gagal keluar.');
+      setShowLogoutConfirm(false);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -192,13 +198,55 @@ export const Profile: React.FC = () => {
       {/* Danger Zone */}
       <div className="pt-4">
         <button 
-          onClick={handleLogout}
+          onClick={() => setShowLogoutConfirm(true)}
           className="w-full flex items-center justify-center space-y-0 space-x-2 p-4 bg-rose-50 text-rose-500 border border-rose-100 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-rose-100 transition-colors"
         >
           <LogOut size={18} />
           <span>Keluar Aplikasi</span>
         </button>
       </div>
+
+      {/* Logout Confirmation Modal */}
+      <AnimatePresence>
+        {showLogoutConfirm && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white w-full max-w-sm rounded-[32px] p-8 shadow-2xl space-y-6 text-center border-4 border-rose-50"
+            >
+              <div className="w-16 h-16 bg-rose-100 text-rose-500 rounded-full flex items-center justify-center mx-auto ring-8 ring-rose-50">
+                <AlertCircle size={32} />
+              </div>
+              
+              <div className="space-y-2">
+                <h3 className="text-xl font-black text-slate-900 tracking-tight">Konfirmasi Keluar</h3>
+                <p className="text-slate-500 text-sm leading-relaxed">
+                  Apakah Anda yakin ingin keluar dari aplikasi? Anda harus masuk kembali untuk mengakses data Anda.
+                </p>
+              </div>
+
+              <div className="flex flex-col space-y-2 pt-2">
+                <button 
+                  onClick={handleLogout}
+                  disabled={loading}
+                  className="w-full p-4 bg-rose-500 text-white rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-rose-600 transition-all shadow-lg shadow-rose-200 disabled:opacity-50"
+                >
+                  {loading ? 'Sedang Keluar...' : 'Ya, Keluar Sekarang'}
+                </button>
+                <button 
+                  onClick={() => setShowLogoutConfirm(false)}
+                  disabled={loading}
+                  className="w-full p-4 bg-slate-100 text-slate-600 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-slate-200 transition-all"
+                >
+                  Batal
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

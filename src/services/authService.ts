@@ -20,6 +20,9 @@ export const signUp = async (username: string, password: string, fullName: strin
     ownerId = ownerData.id;
   }
 
+  // Prevent auto-login flash by setting a flag that AuthContext will check
+  localStorage.setItem('supabase_pending_logout', 'true');
+
   const email = toVirtualEmail(username);
   const { data, error } = await supabase.auth.signUp({
     email,
@@ -34,8 +37,14 @@ export const signUp = async (username: string, password: string, fullName: strin
     }
   });
 
-  if (error) throw error;
-  if (!data.user) throw new Error('Pendaftaran gagal');
+  if (error) {
+    localStorage.removeItem('supabase_pending_logout');
+    throw error;
+  }
+  if (!data.user) {
+    localStorage.removeItem('supabase_pending_logout');
+    throw new Error('Pendaftaran gagal');
+  }
 
   // Set owner_id to self if pemilik
   const finalOwnerId = role === 'pemilik' ? data.user.id : ownerId;
@@ -57,9 +66,6 @@ export const signUp = async (username: string, password: string, fullName: strin
       data: { owner_id: data.user.id }
     });
   }
-
-  // FORCE SIGN OUT immediately to prevent auto-session from leaking into AuthContext
-  await supabase.auth.signOut();
 
   return data;
 };
