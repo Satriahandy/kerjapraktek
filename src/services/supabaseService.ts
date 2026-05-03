@@ -6,16 +6,17 @@ import { Transaction } from '../types';
 
 // 1. Ambil data transaksi (Otomatis terfilter RLS per owner_id)
 export const getSupabaseTransactions = async (): Promise<any[]> => {
-  const { data, error } = await supabase
+  let { data: transactions, error } = await supabase
     .from('transactions')
-    .select('*, profiles(username)')
-    .order('date', { ascending: false });
+    .select('*');
+
+  console.log(transactions);
 
   if (error) {
     console.error('Error fetching transactions:', error);
     return [];
   }
-  return data;
+  return transactions ?? [];
 };
 
 // 2. Simpan transaksi baru

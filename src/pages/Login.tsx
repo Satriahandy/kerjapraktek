@@ -20,17 +20,16 @@ export const Login: React.FC = () => {
       if (isRegistering) {
         // --- LOGIKA REGISTER ---
         if (!fullName) throw new Error('Nama lengkap harus diisi');
-        
+
         await signUp(username, password, fullName, role, ownerUsername);
-        
-        // KUNCI: Paksa logout setelah daftar agar tidak langsung masuk ke dashboard
-        await signOut(); 
-        
+
+
         toast.success('Registrasi berhasil! Silakan login ulang.');
-        
+
         // Reset form & pindah ke mode login
         setIsRegistering(false);
-        setPassword(''); 
+        setPassword('');
+        
       } else {
         // --- LOGIKA LOGIN ---
         await signIn(username, password);
@@ -69,25 +68,23 @@ export const Login: React.FC = () => {
                 required={isRegistering}
               />
             </div>
-            
+
             <div>
               <label className="block text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2">Pilih Peran</label>
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={() => setRole('pemilik')}
-                  className={`py-2 px-3 rounded-xl text-[10px] font-bold uppercase tracking-wider border transition-all ${
-                    role === 'pemilik' ? 'bg-slate-900 border-slate-900 text-white' : 'bg-white text-slate-500'
-                  }`}
+                  className={`py-2 px-3 rounded-xl text-[10px] font-bold uppercase tracking-wider border transition-all ${role === 'pemilik' ? 'bg-slate-900 border-slate-900 text-white' : 'bg-white text-slate-500'
+                    }`}
                 >
                   Pemilik
                 </button>
                 <button
                   type="button"
                   onClick={() => setRole('kasir')}
-                  className={`py-2 px-3 rounded-xl text-[10px] font-bold uppercase tracking-wider border transition-all ${
-                    role === 'kasir' ? 'bg-slate-900 border-slate-900 text-white' : 'bg-white text-slate-500'
-                  }`}
+                  className={`py-2 px-3 rounded-xl text-[10px] font-bold uppercase tracking-wider border transition-all ${role === 'kasir' ? 'bg-slate-900 border-slate-900 text-white' : 'bg-white text-slate-500'
+                    }`}
                 >
                   Kasir
                 </button>
@@ -135,7 +132,7 @@ export const Login: React.FC = () => {
           />
         </div>
 
-        <button 
+        <button
           disabled={loading}
           className="w-full bg-slate-900 text-white p-4 rounded-xl font-black text-xs uppercase tracking-[0.2em] hover:bg-slate-800 active:scale-[0.98] transition-all disabled:opacity-50 mt-2 shadow-lg"
         >

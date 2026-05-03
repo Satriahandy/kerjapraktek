@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Transaction } from '../types';
-import { 
-  Trash2, Search, Filter, ArrowUp, ArrowDown, 
-  FileText, Table, Users, ChevronLeft, ChevronRight, Calendar 
+import {
+  Trash2, Search, Filter, ArrowUp, ArrowDown,
+  FileText, Table, Users, ChevronLeft, ChevronRight, Calendar
 } from 'lucide-react';
 import { formatCurrency, cn } from '../lib/utils';
 import { exportToExcel, exportToPDF } from '../services/exportService';
@@ -22,7 +22,7 @@ export const Transactions: React.FC<TransactionsProps> = ({ transactions, onDele
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'income' | 'expense'>('all');
   const [selectedCashierId, setSelectedCashierId] = useState<string>('all');
-  const [cashiers, setCashiers] = useState<{id: string, username: string}[]>([]);
+  const [cashiers, setCashiers] = useState<{ id: string, username: string }[]>([]);
 
   // --- LOGIKA PERIODE BULAN ---
   const now = new Date();
@@ -46,7 +46,7 @@ export const Transactions: React.FC<TransactionsProps> = ({ transactions, onDele
           .select('id, username')
           .eq('owner_id', user.id)
           .eq('role', 'kasir');
-        
+
         if (!error && data) {
           setCashiers(data);
         }
@@ -58,8 +58,8 @@ export const Transactions: React.FC<TransactionsProps> = ({ transactions, onDele
   // Filter Utama: Bulan + Search + Type + Cashier
   const filteredTransactions = transactions.filter(t => {
     const matchesMonth = t.date.startsWith(currentMonthStr);
-    const matchesSearch = t.description.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         t.category.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = t.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      t.category.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = filterType === 'all' || t.type === filterType;
     const matchesCashier = selectedCashierId === 'all' || t.user_id === selectedCashierId;
     return matchesMonth && matchesSearch && matchesType && matchesCashier;
@@ -69,11 +69,11 @@ export const Transactions: React.FC<TransactionsProps> = ({ transactions, onDele
   const totalIncome = filteredTransactions
     .filter(t => t.type === 'income')
     .reduce((sum, t) => sum + t.amount, 0);
-  
+
   const totalExpense = filteredTransactions
     .filter(t => t.type === 'expense')
     .reduce((sum, t) => sum + t.amount, 0);
-  
+
   const netTotal = totalIncome - totalExpense;
 
   return (
@@ -83,7 +83,7 @@ export const Transactions: React.FC<TransactionsProps> = ({ transactions, onDele
           <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Riwayat Transaksi</h2>
           <p className="text-slate-500 text-sm">Semua catatan pemasukan dan pengeluaran.</p>
         </div>
-        
+
         <div className="flex flex-wrap items-center gap-2">
           {/* Navigasi Periode Bulan */}
           <div className="flex items-center bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden h-[42px]">
@@ -102,14 +102,14 @@ export const Transactions: React.FC<TransactionsProps> = ({ transactions, onDele
           </div>
 
           <div className="flex items-center space-x-2">
-            <button 
+            <button
               onClick={() => exportToExcel(filteredTransactions)}
               className="flex items-center space-x-2 px-4 py-2.5 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-xl text-[10px] font-black uppercase tracking-[0.15em] hover:bg-emerald-100 transition-all shadow-sm active:scale-95"
             >
               <Table size={14} />
               <span>Excel</span>
             </button>
-            <button 
+            <button
               onClick={() => exportToPDF(filteredTransactions)}
               className="flex items-center space-x-2 px-4 py-2.5 bg-rose-50 text-rose-500 border border-rose-100 rounded-xl text-[10px] font-black uppercase tracking-[0.15em] hover:bg-rose-100 transition-all shadow-sm active:scale-95"
             >
@@ -146,15 +146,15 @@ export const Transactions: React.FC<TransactionsProps> = ({ transactions, onDele
       <div className="flex flex-col md:flex-row gap-4">
         <div className="flex-1 relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-          <input 
-            type="text" 
-            placeholder="Cari transaksi..." 
+          <input
+            type="text"
+            placeholder="Cari transaksi..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full bg-white border border-slate-200 pl-10 pr-4 py-2.5 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all shadow-sm"
           />
         </div>
-        
+
         <div className="flex flex-wrap gap-2">
           {isOwner && cashiers.length > 0 && (
             <div className="relative">
@@ -229,7 +229,7 @@ export const Transactions: React.FC<TransactionsProps> = ({ transactions, onDele
                     </td>
                     <td className="px-5 py-3 text-center">
                       {isOwner && (
-                        <button 
+                        <button
                           onClick={() => onDelete(t.id)}
                           className="p-1.5 text-slate-300 hover:text-rose-500 transition-colors rounded-lg hover:bg-rose-50"
                         >
@@ -266,7 +266,7 @@ export const Transactions: React.FC<TransactionsProps> = ({ transactions, onDele
               </div>
               <div className="text-right flex flex-col items-end space-y-2">
                 <span className={cn(
-                   "text-sm font-bold",
+                  "text-sm font-bold",
                   t.type === 'income' ? 'text-emerald-600' : 'text-rose-500'
                 )}>
                   {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}
@@ -298,7 +298,7 @@ export const Transactions: React.FC<TransactionsProps> = ({ transactions, onDele
 };
 
 const FilterTab = ({ active, onClick, label }: { active: boolean, onClick: () => void, label: string }) => (
-  <button 
+  <button
     onClick={onClick}
     className={cn(
       "px-4 py-1.5 text-[10px] font-black rounded-lg transition-all uppercase tracking-wider",
